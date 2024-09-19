@@ -1,0 +1,216 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+// Observer Interface
+interface Observer {
+    void update(String message);
+}
+
+// Classroom Class
+class Classroom {
+    private List<Observer> observers = new ArrayList<>();
+    private String name;
+
+    public Classroom(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addObserver(Observer observer) {
+        observers.add(observer);
+    }
+
+    public void notifyObservers(String message) {
+        for (Observer observer : observers) {
+            observer.update(message);
+        }
+    }
+
+    public void addAssignment(String assignmentDetails) {
+        notifyObservers("New assignment: " + assignmentDetails);
+    }
+}
+
+// Student Class
+class Student implements Observer {
+    private String id;
+
+    public Student(String id) {
+        this.id = id;
+    }
+
+    @Override
+    public void update(String message) {
+        System.out.println("Student " + id + " received: " + message);
+    }
+}
+
+// Command Interface
+interface Command {
+    void execute();
+    void undo();
+}
+
+// Assignment Manager Class
+class AssignmentManager {
+    private List<String> assignments = new ArrayList<>();
+    private List<Command> commandHistory = new ArrayList<>();
+
+    public void addAssignment(String assignment) {
+        assignments.add(assignment);
+        System.out.println("Added assignment: " + assignment);
+        commandHistory.add(new AddAssignmentCommand(this, assignment));
+    }
+
+    public void removeAssignment(String assignment) {
+        assignments.remove(assignment);
+        System.out.println("Removed assignment: " + assignment);
+        commandHistory.add(new RemoveAssignmentCommand(this, assignment));
+    }
+
+    public void undoLastAction() {
+        if (!commandHistory.isEmpty()) {
+            Command command = commandHistory.remove(commandHistory.size() - 1);
+            command.undo();
+        } else {
+            System.out.println("No actions to undo.");
+        }
+    }
+}
+
+// Add Assignment Command Class
+class AddAssignmentCommand implements Command {
+    private AssignmentManager manager;
+    private String assignment;
+
+    public AddAssignmentCommand(AssignmentManager manager, String assignment) {
+        this.manager = manager;
+        this.assignment = assignment;
+    }
+
+    @Override
+    public void execute() {
+        manager.addAssignment(assignment);
+    }
+
+    @Override
+    public void undo() {
+        manager.removeAssignment(assignment);
+    }
+}
+
+// Remove Assignment Command Class
+class RemoveAssignmentCommand implements Command {
+    private AssignmentManager manager;
+    private String assignment;
+
+    public RemoveAssignmentCommand(AssignmentManager manager, String assignment) {
+        this.manager = manager;
+        this.assignment = assignment;
+    }
+
+    @Override
+    public void execute() {
+        manager.removeAssignment(assignment);
+    }
+
+    @Override
+    public void undo() {
+        manager.addAssignment(assignment);
+    }
+}
+
+// Main Class
+public class Main {
+    private static List<Classroom> classrooms = new ArrayList<>();
+    private static AssignmentManager assignmentManager = new AssignmentManager();
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println("\nChoose an option: ");
+            System.out.println("1. Add Classroom");
+            System.out.println("2. Add Student");
+            System.out.println("3. Schedule Assignment");
+            System.out.println("4. Submit Assignment");
+            System.out.println("5. Undo Last Action");
+            System.out.println("6. Exit");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter classroom name: ");
+                    String className = scanner.nextLine();
+                    classrooms.add(new Classroom(className));
+                    System.out.println("Classroom " + className + " has been created.");
+                    break;
+
+                case 2:
+                    System.out.print("Enter student ID: ");
+                    String studentId = scanner.nextLine();
+                    System.out.print("Enter classroom name for enrollment: ");
+                    className = scanner.nextLine();
+                    Classroom classroom = findClassroom(className);
+                    if (classroom != null) {
+                        Student student = new Student(studentId);
+                        classroom.addObserver(student);
+                        System.out.println("Student " + studentId + " has been enrolled in " + className + ".");
+                    } else {
+                        System.out.println("Classroom not found.");
+                    }
+                    break;
+
+                case 3:
+                    System.out.print("Enter classroom name for assignment: ");
+                    className = scanner.nextLine();
+                    classroom = findClassroom(className);
+                    if (classroom != null) {
+                        System.out.print("Enter assignment details: ");
+                        String assignmentDetails = scanner.nextLine();
+                        classroom.addAssignment(assignmentDetails);
+                        assignmentManager.addAssignment(assignmentDetails);
+                    } else {
+                        System.out.println("Classroom not found.");
+                    }
+                    break;
+
+                case 4:
+                    System.out.print("Enter student ID: ");
+                    studentId = scanner.nextLine();
+                    System.out.print("Enter classroom name: ");
+                    className = scanner.nextLine();
+                    System.out.print("Enter assignment details: ");
+                    String assignmentDetails = scanner.nextLine();
+                    System.out.println("Assignment submitted by Student " + studentId + " in " + className + ".");
+                    break;
+
+                case 5:
+                    assignmentManager.undoLastAction();
+                    break;
+
+                case 6:
+                    System.out.println("Exiting...");
+                    scanner.close();
+                    return;
+
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+                    break;
+            }
+        }
+    }
+
+    private static Classroom findClassroom(String name) {
+        for (Classroom classroom : classrooms) {
+            if (classroom.getName().equals(name)) {
+                return classroom;
+            }
+        }
+        return null;
+    }
